@@ -1,19 +1,14 @@
-﻿using Dangl.Calculator;
-using Discord;
-using Discord.Commands;
+﻿using Discord;
 using Discord.WebSocket;
-using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
-using System.Xml;
 
 namespace Camellia.Modules
 {
-    public class Science : ModuleBase
+    public class Science
     {
         public static async Task DurationAsync(IServiceProvider _, SocketSlashCommand cmd)
         {
@@ -59,7 +54,7 @@ namespace Camellia.Modules
         {
             await ReplyAsync(Calculator.Calculate(str).Result.ToString());
         }*/
-
+        /*
         public async Task JsonAsync([Remainder]string str = null)
         {
             str = await GetCleanInputCodeAsync("json", str);
@@ -98,64 +93,7 @@ namespace Camellia.Modules
                 await ReplyAsync("Your XML is **not** valid:\n```" + e.Message + "\n```");
             }
         }
-
-        private IAttachment GetAttachment()
-        {
-            // Gets the attached file, or if it's a reply the file attached to the reply, or null
-            return Context.Message.Attachments.FirstOrDefault() ?? Context.Message.ReferencedMessage?.Attachments?.FirstOrDefault();
-        }
-
-        private async Task<string> GetCleanInputCodeAsync(string currentLanguage, string str)
-        {
-            if (str == null)
-            {
-                if (Context.Message.Attachments.Any()) // Empty message but contains an attachment
-                {
-                    return await StaticObjects.HttpClient.GetStringAsync(Context.Message.Attachments.ElementAt(0).Url);
-                }
-                return null;
-            }
-            if (str == "^") // We need to check previous message
-            {
-                var msg = await GetLastMessageAsync();
-                if (msg.Attachments.Any()) // Previous message has an attachment
-                {
-                    return await StaticObjects.HttpClient.GetStringAsync(msg.Attachments.ElementAt(0).Url);
-                }
-                else if (string.IsNullOrWhiteSpace(msg.Content)) // Previous message is empty
-                {
-                    return null;
-                }
-                str = msg.Content;
-            }
-
-            // Check for code tags
-            if (str.StartsWith("```" + currentLanguage, StringComparison.InvariantCultureIgnoreCase) && str.EndsWith("```"))
-            {
-                return str[(3 + currentLanguage.Length)..^3].Trim();
-            }
-            if (str.StartsWith("```") && str.EndsWith("```"))
-            {
-                return str[3..^3].Trim();
-            }
-            return str.Trim();
-        }
-
-        private async Task<IMessage> GetLastMessageAsync()
-        {
-            var msgs = await Context.Channel.GetMessagesAsync(2).FlattenAsync();
-            if (msgs.Count() == 2)
-            {
-                return msgs.ElementAt(1);
-            }
-            return null;
-        }
-
-        private async Task<IMessage> ReplyFileAsync(string contents, string name)
-        {
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(contents));
-            return await Context.Channel.SendFileAsync(stream, name);
-        }
+        */
 
         public static async Task LengthAsync(IServiceProvider _, SocketSlashCommand cmd)
         {
@@ -179,15 +117,6 @@ namespace Camellia.Modules
             }.Build());
         }
 
-        public async Task HexAsync(params int[] numbers)
-        {
-            await ReplyAsync(string.Join(" ", numbers.Select(x => x.ToString("X"))));
-        }
-
-        public async Task DecAsync(params Hex[] numbers)
-        {
-            await ReplyAsync(string.Join(" ", numbers.Select(x => x.Value)));
-        }
 
         public static async Task RandomBytesAsync(IServiceProvider _, SocketSlashCommand cmd)
         {
@@ -205,29 +134,28 @@ namespace Camellia.Modules
             await cmd.RespondAsync(Convert.ToHexString(bytes));
         }
 
-        public async Task HexDump()
+        public static async Task HexDumpAsync(IServiceProvider _, SocketSlashCommand cmd)
         {
-            var attachment = GetAttachment();
-
-            if (attachment == null)
-            {
-                await ReplyAsync("You must provide a file.");
-                return;
-            }
+            var file = (IAttachment)cmd.Data.Options.First(x => x.Name == "file").Value;
 
             // Download the file and take the first 0x2000 bytes
-            var contents = await StaticObjects.HttpClient.GetByteArrayAsync(attachment.Url);
+            var contents = await StaticObjects.HttpClient.GetByteArrayAsync(file.Url);
             var data = contents.Take(0x2000).ToArray();
 
             var str = Utils.ToHexdump(data);
 
             if (str.Length < 1000)
             {
-                await ReplyAsync("```\n" + str + "\n```");
+                await cmd.RespondAsync("```\n" + str + "\n```");
             }
             else
             {
-                await ReplyFileAsync(str, "hexdump.txt");
+                using MemoryStream ms = new();
+                using StreamWriter writer = new(ms);
+                writer.Write(str);
+                writer.Flush();
+                ms.Position = 0;
+                await cmd.RespondWithFileAsync(ms, "hexdump.txt");
             }
         }
     }

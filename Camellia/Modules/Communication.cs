@@ -1,14 +1,12 @@
-﻿using Discord;
-using Discord.Commands;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
 
 namespace Camellia.Modules
 {
-    public class Communication : ModuleBase
-    {
+    public class Communication
+    {/*
         [Command("Help")]
         public async Task HelpAsync()
         {
@@ -29,7 +27,7 @@ namespace Camellia.Modules
                     Text = "Any other question? Feel free to open an issue: https://github.com/Xwilarg/Camellia/"
                 }
             }.Build());
-        }
+        }*/
 
         public static async Task InviteAsync(IServiceProvider provider, SocketSlashCommand cmd)
         {

@@ -149,7 +149,20 @@ namespace Camellia
                         .WithRequired(true)
                     ]),
                 Callback = Science.DurationAsync
-            }
+            },
+            new CommandInfo()
+            {
+                SlashCommand = new SlashCommandBuilder()
+                    .WithName("hexdump")
+                    .WithDescription("Displays a hex dump of the contents of the specified file")
+                    .AddOption(new SlashCommandOptionBuilder()
+                        .WithName("file")
+                        .WithType(ApplicationCommandOptionType.Attachment)
+                        .WithDescription("File to check")
+                        .WithRequired(true)
+                    ),
+                Callback = Science.HexDumpAsync
+            },
         ];
         private bool _areCommandLoaded;
         private async Task Ready()
