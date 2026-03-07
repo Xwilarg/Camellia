@@ -15,15 +15,50 @@ namespace Camellia.Modules
 {
     public class Science : ModuleBase
     {
-        public async Task DurationAsync(DateTime d1, DateTime d2)
+        public static async Task DurationAsync(IServiceProvider _, SocketSlashCommand cmd)
         {
-            await ReplyAsync((d1 > d2 ? d1 - d2 : d2 - d1).ToString());
+            var d1Str = (string)cmd.Data.Options.First(x => x.Name == "startdate").Value;
+            var d2Str = (string)cmd.Data.Options.First(x => x.Name == "enddate").Value;
+
+            if (!DateTime.TryParse(d1Str, out var d1))
+            {
+                await cmd.RespondAsync("Starting date isn't in a valid format", ephemeral: true);
+                return;
+            }
+            if (!DateTime.TryParse(d2Str, out var d2))
+            {
+                await cmd.RespondAsync("Ending date isn't in a valid format", ephemeral: true);
+                return;
+            }
+            if (d1 > d2)
+            {
+                await cmd.RespondAsync("Starting date must be anterior to ending date", ephemeral: true);
+                return;
+            }
+
+            var duration = d2 - d1;
+            await cmd.RespondAsync(embed: new EmbedBuilder
+            {
+                Color = Color.Blue,
+                Fields = [
+                    new()
+                    {
+                        Name = "Total days",
+                        Value = duration.TotalDays
+                    },
+                    new()
+                    {
+                        Name = "Total hours",
+                        Value = duration.TotalHours
+                    }
+                ]
+            }.Build());
         }
 
-        public async Task CalcAsync([Remainder]string str)
+        /*public async Task CalcAsync([Remainder]string str)
         {
             await ReplyAsync(Calculator.Calculate(str).Result.ToString());
-        }
+        }*/
 
         public async Task JsonAsync([Remainder]string str = null)
         {

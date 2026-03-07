@@ -130,6 +130,25 @@ namespace Camellia
                         .WithRequired(false)
                     ),
                 Callback = Science.RandomBytesAsync
+            },
+            new CommandInfo()
+            {
+                SlashCommand = new SlashCommandBuilder()
+                    .WithName("duration")
+                    .WithDescription("Display the duration between 2 dates")
+                    .AddOptions([
+                        new SlashCommandOptionBuilder()
+                        .WithName("startdate")
+                        .WithType(ApplicationCommandOptionType.String)
+                        .WithDescription("Starting date")
+                        .WithRequired(true),
+                        new SlashCommandOptionBuilder()
+                        .WithName("enddate")
+                        .WithType(ApplicationCommandOptionType.String)
+                        .WithDescription("Ending date")
+                        .WithRequired(true)
+                    ]),
+                Callback = Science.DurationAsync
             }
         ];
         private bool _areCommandLoaded;

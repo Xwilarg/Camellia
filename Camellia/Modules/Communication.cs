@@ -20,7 +20,6 @@ namespace Camellia.Modules
                     "**JSON [text]:** Check if a JSON is valid or not\n" +
                     "**XML [text]:** Check if an XML is valid or not\n" +
                     "**Calc [operation]:** Evaluate a mathematical expression\n" +
-                    "**Bytes [number of bytes]:** Generates a string of cryptographic random bytes\n" +
                     "**Duration [date 1] [date 2]:** Display the duration between 2 dates\n" +
                     "**Hexdump:** Displays a hex dump of the contents of the specified file\n"
                     ,
