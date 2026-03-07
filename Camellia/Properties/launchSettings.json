@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Camellia": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
