@@ -122,7 +122,7 @@ namespace Camellia.Modules
             return await Context.Channel.SendFileAsync(stream, name);
         }
 
-        public static async Task Length(IServiceProvider _, SocketSlashCommand cmd)
+        public static async Task LengthAsync(IServiceProvider _, SocketSlashCommand cmd)
         {
             var str = (string)cmd.Data.Options.First(x => x.Name == "text").Value;
 

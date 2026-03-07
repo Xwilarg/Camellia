@@ -19,18 +19,18 @@ namespace Camellia
         private IServiceProvider _provider;
 
         public static async Task Main()
-            => await new Program().MainAsync();
-
-
-        private readonly DiscordSocketClient _client = new(new DiscordSocketConfig
         {
-            LogLevel = LogSeverity.Verbose,
-            GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
-        });
+            var client = new DiscordSocketClient(new DiscordSocketConfig
+            {
+                LogLevel = LogSeverity.Verbose,
+                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+            });
+            await new Program(client).MainAsync(client);
+        }
 
-        private Program()
+        private Program(DiscordSocketClient client)
         {
-            _client.Log += (msg) =>
+            client.Log += (msg) =>
             {
                 Console.WriteLine(msg);
                 return Task.CompletedTask;
@@ -57,7 +57,7 @@ namespace Camellia
             Thread.CurrentThread.CurrentCulture = culture;
         }
 
-        private async Task MainAsync()
+        private async Task MainAsync(DiscordSocketClient client)
         {
             //_client.MessageReceived += HandleCommandAsync;
 
@@ -72,18 +72,19 @@ namespace Camellia
             });
             _debugGuild = credentials.DebugGuild;
 
-            _client.Ready += Ready;
-            _client.SlashCommandExecuted += SlashCommandExecuted;
+            client.Ready += Ready;
+            client.SlashCommandExecuted += SlashCommandExecuted;
 
             if (credentials == null) throw new InvalidOperationException("Credentials not found");
             if (credentials.BotToken == null) throw new InvalidOperationException("Bot token cannot be null");
 
             _provider = new ServiceCollection()
                 .AddSingleton<HttpClient>()
+                .AddSingleton(client)
                 .BuildServiceProvider();
 
-            await _client.LoginAsync(TokenType.Bot, credentials.BotToken);
-            await _client.StartAsync();
+            await client.LoginAsync(TokenType.Bot, credentials.BotToken);
+            await client.StartAsync();
 
             await Task.Delay(-1);
         }
@@ -108,7 +109,14 @@ namespace Camellia
                         .WithDescription("Text to get the length of")
                         .WithRequired(true)
                     ),
-                Callback = Science.Length
+                Callback = Science.LengthAsync
+            },
+            new CommandInfo()
+            {
+                SlashCommand = new SlashCommandBuilder()
+                    .WithName("invite")
+                    .WithDescription("Get the invite link of the bot"),
+                Callback = Communication.InviteAsync
             }
 
         ];
@@ -125,8 +133,10 @@ namespace Camellia
             {
                 try
                 {
+                    var client = _provider.GetRequiredService<DiscordSocketClient>();
+
                     SocketGuild debugGuild = null;
-                    if (_debugGuild != null) _client.GetGuild(_debugGuild.Value);
+                    if (_debugGuild != null) client.GetGuild(_debugGuild.Value);
                     var cmds = Commands.Select(x => x.SlashCommand.Build());
                     foreach (var c in cmds)
                     {
@@ -136,7 +146,7 @@ namespace Camellia
                         }
                         else
                         {
-                            await _client.CreateGlobalApplicationCommandAsync(c);
+                            await client.CreateGlobalApplicationCommandAsync(c);
                         }
                     }
 
@@ -146,7 +156,7 @@ namespace Camellia
                     }
                     else
                     {
-                        await _client.BulkOverwriteGlobalApplicationCommandsAsync(cmds.ToArray());
+                        await client.BulkOverwriteGlobalApplicationCommandsAsync(cmds.ToArray());
                     }
                 }
                 catch (Exception ex)

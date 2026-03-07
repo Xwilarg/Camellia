@@ -1,5 +1,8 @@
 ﻿using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Threading.Tasks;
 
 namespace Camellia.Modules
@@ -12,7 +15,6 @@ namespace Camellia.Modules
             await ReplyAsync(embed: new EmbedBuilder
             {
                 Description =
-                    "**Length [text]:** Give the length of a string\n" +
                     "**Hex [decimal number]:** Convert decimal to hexadecimal\n" +
                     "**Dec [hexadecimal number]:** Convert hexadecimal to decimal\n" +
                     "**JSON [text]:** Check if a JSON is valid or not\n" +
@@ -30,10 +32,9 @@ namespace Camellia.Modules
             }.Build());
         }
 
-        [Command("Invite")]
-        public async Task InviteAsync()
+        public static async Task InviteAsync(IServiceProvider provider, SocketSlashCommand cmd)
         {
-            await ReplyAsync($"https://discord.com/api/oauth2/authorize?client_id={Context.Client.CurrentUser.Id}&scope=bot");
+            await cmd.RespondAsync($"https://discord.com/api/oauth2/authorize?client_id={provider.GetRequiredService<DiscordSocketClient>().CurrentUser.Id}&scope=applications.commands+bot");
         }
     }
 }
