@@ -1,6 +1,7 @@
 ﻿using Dangl.Calculator;
 using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
 using Newtonsoft.Json;
 using System;
 using System.IO;
@@ -14,19 +15,16 @@ namespace Camellia.Modules
 {
     public class Science : ModuleBase
     {
-        [Command("Duration")]
         public async Task DurationAsync(DateTime d1, DateTime d2)
         {
             await ReplyAsync((d1 > d2 ? d1 - d2 : d2 - d1).ToString());
         }
 
-        [Command("Calc")]
         public async Task CalcAsync([Remainder]string str)
         {
             await ReplyAsync(Calculator.Calculate(str).Result.ToString());
         }
 
-        [Command("Json")]
         public async Task JsonAsync([Remainder]string str = null)
         {
             str = await GetCleanInputCodeAsync("json", str);
@@ -46,7 +44,6 @@ namespace Camellia.Modules
             }
         }
 
-        [Command("XML")]
         public async Task XmlAsync([Remainder] string str = null)
         {
             str = await GetCleanInputCodeAsync("xml", str);
@@ -125,14 +122,14 @@ namespace Camellia.Modules
             return await Context.Channel.SendFileAsync(stream, name);
         }
 
-        [Command("Length")]
-        public async Task Length([Remainder]string str)
+        public static async Task Length(IServiceProvider _, SocketSlashCommand cmd)
         {
-            await ReplyAsync(embed: new EmbedBuilder
+            var str = (string)cmd.Data.Options.First(x => x.Name == "text").Value;
+
+            await cmd.RespondAsync(embed: new EmbedBuilder
             {
                 Color = Color.Blue,
-                Fields = new()
-                {
+                Fields = [
                     new()
                     {
                         Name = "Length",
@@ -141,25 +138,22 @@ namespace Camellia.Modules
                     new()
                     {
                         Name = "Alphanumeric only",
-                        Value = str.Where(x => char.IsLetterOrDigit(x)).Count()
+                        Value = str.Count(x => char.IsLetterOrDigit(x))
                     }
-                }
+                ]
             }.Build());
         }
 
-        [Command("Hex")]
         public async Task HexAsync(params int[] numbers)
         {
             await ReplyAsync(string.Join(" ", numbers.Select(x => x.ToString("X"))));
         }
 
-        [Command("Dec")]
         public async Task DecAsync(params Hex[] numbers)
         {
             await ReplyAsync(string.Join(" ", numbers.Select(x => x.Value)));
         }
 
-        [Command("Bytes")]
         public async Task RandomBytesAsync(int length = 16)
         {
             if (length <= 0 || length > 512)
@@ -174,7 +168,6 @@ namespace Camellia.Modules
             await ReplyAsync(Convert.ToHexString(bytes));
         }
 
-        [Command("Hexdump")]
         public async Task HexDump()
         {
             var attachment = GetAttachment();

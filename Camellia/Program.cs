@@ -1,11 +1,12 @@
 ﻿using Camellia.Modules;
-using Camellia.TypeReader;
 using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,9 @@ namespace Camellia
 {
     class Program
     {
+        private ulong? _debugGuild;
+        private IServiceProvider _provider;
+
         public static async Task Main()
             => await new Program().MainAsync();
 
@@ -23,7 +27,6 @@ namespace Camellia
             LogLevel = LogSeverity.Verbose,
             GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
         });
-        private readonly CommandService _commands = new();
 
         private Program()
         {
@@ -32,6 +35,7 @@ namespace Camellia
                 Console.WriteLine(msg);
                 return Task.CompletedTask;
             };
+            /*
             _commands.Log += async (msg) =>
             {
                 Console.WriteLine(msg);
@@ -46,7 +50,7 @@ namespace Camellia
                     }.Build());
                 }
 #endif
-            };
+            };*/
 
             CultureInfo culture = (CultureInfo)Thread.CurrentThread.CurrentCulture.Clone();
             culture.NumberFormat.NumberDecimalSeparator = ".";
@@ -55,43 +59,101 @@ namespace Camellia
 
         private async Task MainAsync()
         {
-            _client.MessageReceived += HandleCommandAsync;
+            //_client.MessageReceived += HandleCommandAsync;
 
-            _commands.AddTypeReader<Hex>(new HexReader());
+            /*_commands.AddTypeReader<Hex>(new HexReader());
 
             await _commands.AddModuleAsync<Communication>(null);
-            await _commands.AddModuleAsync<Science>(null);
+            await _commands.AddModuleAsync<Science>(null);*/
 
             var credentials = JsonSerializer.Deserialize<Credentials>(File.ReadAllText("Keys/Credentials.json"), new JsonSerializerOptions
             {
-                PropertyNameCaseInsensitive = true
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
+            _debugGuild = credentials.DebugGuild;
+
+            _client.Ready += Ready;
+            _client.SlashCommandExecuted += SlashCommandExecuted;
+
+            if (credentials == null) throw new InvalidOperationException("Credentials not found");
+            if (credentials.BotToken == null) throw new InvalidOperationException("Bot token cannot be null");
+
+            _provider = new ServiceCollection()
+                .AddSingleton<HttpClient>()
+                .BuildServiceProvider();
+
             await _client.LoginAsync(TokenType.Bot, credentials.BotToken);
             await _client.StartAsync();
 
             await Task.Delay(-1);
         }
 
-        private async Task HandleCommandAsync(SocketMessage arg)
+        private async Task SlashCommandExecuted(SocketSlashCommand arg)
         {
-            if (arg is not SocketUserMessage msg || arg.Author.IsBot)
+            var target = Commands.FirstOrDefault(x => string.Compare(x.SlashCommand.Name, arg.CommandName, true) == 0);
+            if (target == null) throw new NotImplementedException();
+
+            await target.Callback(_provider, arg);
+        }
+
+        private CommandInfo[] Commands = [
+            new CommandInfo()
+            {
+                SlashCommand = new SlashCommandBuilder()
+                    .WithName("length")
+                    .WithDescription("Give the length of a text")
+                    .AddOption(new SlashCommandOptionBuilder()
+                        .WithName("text")
+                        .WithType(ApplicationCommandOptionType.String)
+                        .WithDescription("Text to get the length of")
+                        .WithRequired(true)
+                    ),
+                Callback = Science.Length
+            }
+
+        ];
+        private bool _areCommandLoaded;
+        private async Task Ready()
+        {
+            if (_areCommandLoaded)
             {
                 return;
             }
-            int pos = 0;
-            if (msg.HasMentionPrefix(_client.CurrentUser, ref pos) || msg.HasStringPrefix("c.", ref pos))
+            _areCommandLoaded = true;
+
+            _ = Task.Run(async () =>
             {
-                SocketCommandContext context = new(_client, msg);
-                var result = await _commands.ExecuteAsync(context, pos, null);
-                if (!result.IsSuccess)
+                try
                 {
-                    if (result.Error == CommandError.UnmetPrecondition || result.Error == CommandError.BadArgCount
-                        || result.Error == CommandError.ParseFailed)
+                    SocketGuild debugGuild = null;
+                    if (_debugGuild != null) _client.GetGuild(_debugGuild.Value);
+                    var cmds = Commands.Select(x => x.SlashCommand.Build());
+                    foreach (var c in cmds)
                     {
-                        await msg.Channel.SendMessageAsync(result.ErrorReason);
+                        if (debugGuild != null)
+                        {
+                            await debugGuild.CreateApplicationCommandAsync(c);
+                        }
+                        else
+                        {
+                            await _client.CreateGlobalApplicationCommandAsync(c);
+                        }
+                    }
+
+                    if (debugGuild != null)
+                    {
+                        await debugGuild.BulkOverwriteApplicationCommandAsync(cmds.ToArray());
+                    }
+                    else
+                    {
+                        await _client.BulkOverwriteGlobalApplicationCommandsAsync(cmds.ToArray());
                     }
                 }
-            }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to preload commands: {ex}");
+                }
+            });
         }
     }
 }
