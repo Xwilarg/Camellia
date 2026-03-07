@@ -117,8 +117,20 @@ namespace Camellia
                     .WithName("invite")
                     .WithDescription("Get the invite link of the bot"),
                 Callback = Communication.InviteAsync
+            },
+            new CommandInfo()
+            {
+                SlashCommand = new SlashCommandBuilder()
+                    .WithName("bytes")
+                    .WithDescription("Generate a string of cryptographic random bytes")
+                    .AddOption(new SlashCommandOptionBuilder()
+                        .WithName("length")
+                        .WithType(ApplicationCommandOptionType.Number)
+                        .WithDescription("Number of bytes")
+                        .WithRequired(false)
+                    ),
+                Callback = Science.RandomBytesAsync
             }
-
         ];
         private bool _areCommandLoaded;
         private async Task Ready()

@@ -154,18 +154,20 @@ namespace Camellia.Modules
             await ReplyAsync(string.Join(" ", numbers.Select(x => x.Value)));
         }
 
-        public async Task RandomBytesAsync(int length = 16)
+        public static async Task RandomBytesAsync(IServiceProvider _, SocketSlashCommand cmd)
         {
+            long length = ((long?)cmd.Data.Options.FirstOrDefault(x => x.Name == "length")?.Value) ?? 16;
+
             if (length <= 0 || length > 512)
             {
-                await ReplyAsync("You must specify a length between 1 and 512 bytes.");
+                await cmd.RespondAsync("You must specify a length between 1 and 512 bytes.", ephemeral: true);
                 return;
             }
 
             var bytes = new byte[length];
             RandomNumberGenerator.Fill(bytes);
 
-            await ReplyAsync(Convert.ToHexString(bytes));
+            await cmd.RespondAsync(Convert.ToHexString(bytes));
         }
 
         public async Task HexDump()
